@@ -1,0 +1,10 @@
+type: object
+properties:
+    job:
+        type: object
+        required: ['db']
+        properties:
+            db:
+                type: string
+
+required: ['job']

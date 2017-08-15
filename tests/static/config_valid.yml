@@ -1,0 +1,8 @@
+job:
+    db: /tmp/test.db
+logger:
+    level: DEBUG
+    directory: /tmp
+    handlers:
+        file: true
+        console: false
