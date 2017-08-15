@@ -7,7 +7,7 @@ impulsare/job
 
 .. image:: https://scrutinizer-ci.com/g/impulsare/job/badges/quality-score.png?b=master
     :target: https://scrutinizer-ci.com/g/impulsare/job/
-    
+
 .. image:: https://scrutinizer-ci.com/g/impulsare/job/badges/coverage.png?b=master
     :target: https://travis-ci.org/impulsare/job
 
@@ -234,10 +234,21 @@ Retrieve a Job, its hooks and fields
     fields = Reader.get_fields() # Get rules for first field : rules = fields[0].rules
 
 
-TODO
-====
-Don't check if table exists on each model but do it on app installation.
+Development & Tests
+===================
 
+.. code-block:: bash
+
+    $ pip install -r requirements.txt
+    $ pip install -r requirements-dev.txt
+    $ py.test
+
+
+
+TODO
+----
+Don't check if table exists on each model but do it on app installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 To get the DB :
 
 .. code-block:: python
@@ -249,12 +260,6 @@ To get the DB :
     db.create_tables([models.Job, models.Hook, models.Rule])
 
 
-
-Development & Tests
-===================
-
-.. code-block:: bash
-
-    $ pip install -r requirements.txt
-    $ pip install -r requirements-dev.txt
-    $ py.test
+Refactor writer
+~~~~~~~~~~~~~~~
+To have a class for hooks, and another for rules.
