@@ -1,5 +1,19 @@
 impulsare/job
 =============
+
+
+.. image:: https://travis-ci.org/impulsare/job.svg?branch=master
+    :target: https://travis-ci.org/impulsare/job
+
+.. image:: https://scrutinizer-ci.com/g/impulsare/job/badges/quality-score.png?b=master
+    :target: https://scrutinizer-ci.com/g/impulsare/job/
+    
+.. image:: https://scrutinizer-ci.com/g/impulsare/job/badges/coverage.png?b=master
+    :target: https://travis-ci.org/impulsare/job
+
+Overview
+--------
+
 A jobs manager, specific to **impulsare**. It reads, write and delete jobs from an sqlite db.
 
 See ``tests/static/`` for examples of configuration.
