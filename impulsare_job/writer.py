@@ -6,65 +6,10 @@ from .models import Field, Job, Hook, Rule
 from peewee import DeleteQuery, OperationalError
 
 
-class Writer(Db):
-    """Jobs Writer. Write Jobs to an SQLite file"""
-
-    _required_props = ('name', 'input', 'output')
-
-
+class FieldsWriter(Db):
     def __init__(self, config_file: str, job: str = None):
         Db.__init__(self, config_file)
-
-        self._data = {
-            'name': None,
-            'active': True,
-            'description': None,
-            'priority': 1,
-            'input': None,
-            'input_parameters': {},
-            'output': None,
-            'output_parameters': {},
-            'mode': 'c'
-            }
-
         self._fields = {}
-        self._hooks = {}
-
-        if job is not None:
-            self._reader = Reader(config_file, job)
-            self._job = self._reader.get_job()
-            self._populate_data_from_job()
-        else:
-            self._job = Job()
-
-
-    def get_job(self) -> Job:
-        """Returns the current job state"""
-
-        return self._job
-
-
-    def get_prop(self, prop: str):
-        """Get a property from the data, not saved yet to the job"""
-
-        if prop not in self._job_props_type:
-            raise KeyError('{} is not a valid property'.format(prop))
-
-        return self._data[prop]
-
-
-    def set_prop(self, prop: str, value) -> None:
-        """
-        Set a value for a property defined in self._data
-        We can define specific checks by creating a method with the
-        name of the prop (Example: to check 'mode' create '_check_mode')
-        """
-
-        check_method = '_check_{}'.format(prop)
-        if hasattr(self, check_method) and callable(getattr(self, check_method)):
-            getattr(self, check_method)(value)
-
-        self._data[prop] = self._parse_value(prop, value)
 
 
     def add_field(self, input: str, output: str):
@@ -72,6 +17,28 @@ class Writer(Db):
             raise KeyError('Field {} already exists. Delete it first'.format(output))
 
         self._fields[output] = {'input': input, 'output': output, 'rules': {}}
+
+
+    def add_fields_to_db(self, job: Job):
+        # First delete all rules linked ot fields + fields
+        # to avoid spending too much time updating, deleting, etc ...
+        try:
+            fields = Field.select().where(Field.job == job)
+            for field in fields:
+                field.delete_instance(recursive=True)
+        except OperationalError as e:
+            pass
+
+        fields_added = list()
+        for field, params in self._fields.items():
+            field = Field(input=params['input'], output=params['output'], job=job)
+            field.save()
+            fields_added.append(field.id)
+
+            if params['rules'] is not {}:
+                self.add_rules_to_db(field.id, params['rules'])
+
+        return fields_added
 
 
     def del_field(self, output_field: str) -> None:
@@ -99,6 +66,13 @@ class Writer(Db):
         return self._fields
 
 
+    def set_fields_from_job(self, reader: Reader) -> None:
+        fields = reader.get_fields()
+        for field in fields:
+            self.add_field(input=field.input, output=field.output)
+            self.set_rules_from_field(field.output, field.rules)
+
+
     def add_rule(self, output_field: str, name: str, method: str, description: str = None,
                  active: bool = True, params: list = {}, blocking: bool = False,
                  priority: int = 1) -> None:
@@ -112,6 +86,17 @@ class Writer(Db):
             'active': active, 'params': params, 'blocking': blocking,
             'priority': priority
             }
+
+
+    def add_rules_to_db(self, field_id: int, rules: dict):
+        for rule, params in rules.items():
+            rule = Rule(
+                name=rule, method=params['method'], description=params['description'],
+                active=params['active'], params=json.dumps(params['params']),
+                blocking=params['blocking'], priority=params['priority'], field=field_id
+                )
+
+            rule.save()
 
 
     def del_rule(self, output_field: str, rule: str) -> None:
@@ -137,6 +122,18 @@ class Writer(Db):
             return True
 
         return False
+
+
+    def set_rules_from_field(self, field: str, rules: dict) -> None:
+        for rule in rules:
+            self.add_rule(field, rule.name, rule.method, rule.description,
+                          rule.active, rule.params, rule.blocking, rule.priority)
+
+
+class HooksWriter(Db):
+    def __init__(self, config_file: str, job: str = None):
+        Db.__init__(self, config_file)
+        self._hooks = {}
 
 
     def hook_exists(self, name: str) -> bool:
@@ -175,6 +172,93 @@ class Writer(Db):
         del self._hooks[name]
 
 
+    def add_hooks_to_db(self, job: Job):
+        # First delete all hooks to avoid spending too much time
+        # updating, deleting, etc ...
+        try:
+            DeleteQuery(Hook).where(Hook.job == job.id).execute()
+        except OperationalError as e:
+            pass
+
+        hooks_added = list()
+        for hook, params in self._hooks.items():
+            hook = Hook(name=hook, when=params['when'], method=params['method'],
+                        priority=params['priority'], description=params['description'],
+                        active=params['active'], job=job)
+            hook.save()
+            hooks_added.append(hook.id)
+
+        return hooks_added
+
+
+    def set_hooks_from_job(self, reader: Reader) -> None:
+        hooks = reader.get_hooks()
+        for hook in hooks:
+            self.add_hook(hook.name, hook.method, hook.when, hook.description,
+                          hook.active, hook.priority)
+
+
+class Writer(Db):
+    """Jobs Writer. Write Jobs to an SQLite file"""
+
+    _required_props = ('name', 'input', 'output')
+
+
+    def __init__(self, config_file: str, job: str = None):
+        Db.__init__(self, config_file)
+
+        self._data = {
+            'name': None,
+            'active': True,
+            'description': None,
+            'priority': 1,
+            'input': None,
+            'input_parameters': {},
+            'output': None,
+            'output_parameters': {},
+            'mode': 'c'
+            }
+
+        self.fields_writer = FieldsWriter(config_file, job)
+        self.hooks_writer = HooksWriter(config_file, job)
+
+        if job is not None:
+            self._reader = Reader(config_file, job)
+            self._job = self._reader.get_job()
+            self._populate_data_from_job()
+        else:
+            self._job = Job()
+
+
+    def get_job(self) -> Job:
+        """Returns the current job state"""
+
+        return self._job
+
+
+    def get_prop(self, prop: str):
+        """Get a property from the data, not saved yet to the job"""
+
+        if prop not in self._job_props_type:
+            raise KeyError('{} is not a valid property'.format(prop))
+
+        return self._data[prop]
+
+
+    def set_prop(self, prop: str, value) -> None:
+        """
+        Set a value for a property defined in self._data
+        We can define specific checks by creating a method with the
+        name of the prop (Example: to check 'mode' create '_check_mode')
+        """
+
+        check_method = '_check_{}'.format(prop)
+        if hasattr(self, check_method) and callable(getattr(self, check_method)):
+            getattr(self, check_method)(value)
+
+        self._data[prop] = self._parse_value(prop, value)
+
+
     def save(self) -> Job:
         self._verify_required_values()
 
@@ -183,8 +267,8 @@ class Writer(Db):
 
         try:
             self._job.save()
-            self._add_hooks_to_db()
-            self._add_fields_to_db()
+            self.fields_writer.add_fields_to_db(self._job)
+            self.hooks_writer.add_hooks_to_db(self._job)
 
             return self._job
         except Exception as e:
@@ -193,58 +277,6 @@ class Writer(Db):
 
     def delete(self):
         self._job.delete_instance()
-
-
-    def _add_hooks_to_db(self):
-        # First delete all hooks to avoid spending too much time
-        # updating, deleting, etc ...
-        try:
-            DeleteQuery(Hook).where(Hook.job == self._job.id).execute()
-        except OperationalError as e:
-            pass
-
-        hooks_added = list()
-        for hook, params in self._hooks.items():
-            hook = Hook(name=hook, when=params['when'], method=params['method'],
-                        priority=params['priority'], description=params['description'],
-                        active=params['active'], job=self._job)
-            hook.save()
-            hooks_added.append(hook.id)
-
-        return hooks_added
-
-
-    def _add_fields_to_db(self):
-        # First delete all rules linked ot fields + fields
-        # to avoid spending too much time updating, deleting, etc ...
-        try:
-            fields = Field.select().where(Field.job == self._job)
-            for field in fields:
-                field.delete_instance(recursive=True)
-        except OperationalError as e:
-            pass
-
-        fields_added = list()
-        for field, params in self._fields.items():
-            field = Field(input=params['input'], output=params['output'], job=self._job)
-            field.save()
-            fields_added.append(field.id)
-
-            if params['rules'] is not {}:
-                self._add_rules_to_db(field.id, params['rules'])
-
-        return fields_added
-
-
-    def _add_rules_to_db(self, field_id: int, rules: dict):
-        for rule, params in rules.items():
-            rule = Rule(
-                name=rule, method=params['method'], description=params['description'],
-                active=params['active'], params=json.dumps(params['params']),
-                blocking=params['blocking'], priority=params['priority'], field=field_id
-                )
-
-            rule.save()
 
 
     def _check_mode(self, mode: str) -> None:
@@ -270,28 +302,8 @@ class Writer(Db):
         for prop in self._job_props_type:
             self._data[prop] = self._reader.get_prop(prop)
 
-        self._set_fields_from_job()
-        self._set_hooks_from_job()
-
-
-    def _set_hooks_from_job(self) -> None:
-        hooks = self._reader.get_hooks()
-        for hook in hooks:
-            self.add_hook(hook.name, hook.method, hook.when, hook.description,
-                          hook.active, hook.priority)
-
-
-    def _set_fields_from_job(self) -> None:
-        fields = self._reader.get_fields()
-        for field in fields:
-            self.add_field(input=field.input, output=field.output)
-            self._set_rules_from_field(field.output, field.rules)
-
-
-    def _set_rules_from_field(self, field: str, rules: dict) -> None:
-        for rule in rules:
-            self.add_rule(field, rule.name, rule.method, rule.description,
-                          rule.active, rule.params, rule.blocking, rule.priority)
+        self.fields_writer.set_fields_from_job(self._reader)
+        self.hooks_writer.set_hooks_from_job(self._reader)
 
 
     def _verify_required_values(self) -> None:

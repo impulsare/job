@@ -67,9 +67,9 @@ class TestReader(unittest.TestCase):
         writer.set_prop('input', self._job_input)
         writer.set_prop('input_parameters', {'delimiter': ';'})
         writer.set_prop('output', self._job_output)
-        writer.add_field('input_test', 'output_test')
-        writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'}, blocking=True, priority=1)
-        writer.add_rule(output_field='output_test', name='test2', method='my_method2', params={'b': 'c'}, blocking=False, priority=100)
+        writer.fields_writer.add_field('input_test', 'output_test')
+        writer.fields_writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'}, blocking=True, priority=1)
+        writer.fields_writer.add_rule(output_field='output_test', name='test2', method='my_method2', params={'b': 'c'}, blocking=False, priority=100)
         job = writer.save()
 
         self.assertTrue(os.path.isfile('/tmp/test.db'))

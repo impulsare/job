@@ -46,9 +46,9 @@ impulsare/job implements a writer to :
 
 - Create / Update jobs (``save()``)
 - Delete jobs (``delete()``)
-- Add / Remove Hooks (`add_hook()` and ``del_hook()``)
-- Add / Remove Fields (``add_field()`` and ``del_field()``)
-- Add / Remove Rules related to Fields (``add_rule()`` and ``del_rule()``)
+- Add / Remove Hooks (`hooks_writer.add_hook()` and ``hooks_writer.del_hook()``)
+- Add / Remove Fields (``fields_writer.add_field()`` and ``fields_writer.del_field()``)
+- Add / Remove Rules related to Fields (``fields_writer.add_rule()`` and ``fields_writer.del_rule()``)
 
 
 Reader
@@ -123,8 +123,8 @@ Verify if a hook exists, else add it
 .. code-block:: python
 
     # .... continuation of code above
-    if not writer.hook_exists('test'):
-        writer.add_hook(name='upload_file', method='upload_file', when='after_process')
+    if not writer.hooks_writer.hook_exists('test'):
+        writer.hooks_writer.add_hook(name='upload_file', method='upload_file', when='after_process')
 
 
 Allowed properties for hooks:
@@ -143,8 +143,8 @@ Allowed properties for hooks:
 
 Other methods:
 
-- `get_hooks`
-- `del_hook`
+- `hooks_writer.get_hooks`
+- `hooks_writer.del_hook`
 
 
 There is no method `update`, to update a hook, delete it then recreate it.
@@ -162,10 +162,10 @@ for various output).
 .. code-block:: python
 
     # .... continuation of code above
-    if writer.field_exists('firstname'):
-        writer.del_field('firstname')
+    if writer.fields_writer.field_exists('firstname'):
+        writer.fields_writer.del_field('firstname')
 
-    writer.add_field(input='first_name', output='firstname')
+    writer.fields_writer.add_field(input='first_name', output='firstname')
 
 
 Allowed properties for fields:
@@ -180,8 +180,8 @@ Allowed properties for fields:
 
 Other methods:
 
-- `get_field`
-- `get_fields`
+- `fields_writer.get_field`
+- `fields_writer.get_fields`
 
 
 There is no method `update`, to update a field, delete it then recreate it.
@@ -192,7 +192,7 @@ Add a rule
 
 .. code-block:: python
 
-    writer.add_rule(output_field='firstname', name='uppercase', method='uppercase')
+    writer.fields_writer.add_rule(output_field='firstname', name='uppercase', method='uppercase')
 
 
 Allowed properties for rules:
@@ -212,9 +212,9 @@ Allowed properties for rules:
 
 Other methods:
 
-- `del_rule`
-- `get_rules`
-- `rule_exists`
+- `fields_writer.del_rule`
+- `fields_writer.get_rules`
+- `fields_writer.rule_exists`
 
 
 There is no method ``update``, to update a rule, delete it then recreate it.

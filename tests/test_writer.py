@@ -178,74 +178,74 @@ class TestWriter(unittest.TestCase):
         writer = Writer(base_path + '/static/config_valid.yml')
 
         with self.assertRaisesRegex(KeyError, "Hook test does not exist"):
-            writer.get_hook('test')
+            writer.hooks_writer.get_hook('test')
 
-        self.assertFalse(writer.hook_exists('test'))
-        writer.add_hook(name='test', method='method', when='never')
-        self.assertTrue(writer.hook_exists('test'))
-        hook = writer.get_hook('test')
+        self.assertFalse(writer.hooks_writer.hook_exists('test'))
+        writer.hooks_writer.add_hook(name='test', method='method', when='never')
+        self.assertTrue(writer.hooks_writer.hook_exists('test'))
+        hook = writer.hooks_writer.get_hook('test')
         self.assertEqual(hook, {'name': 'test', 'active': True, 'description': None,
                                 'method': 'method', 'priority': 1, 'when': 'never'})
 
         with self.assertRaisesRegex(KeyError, "Hook test already exists. Delete it first"):
-            writer.add_hook('test', 'method', 'never')
+            writer.hooks_writer.add_hook('test', 'method', 'never')
 
-        writer.del_hook('test')
-        self.assertFalse(writer.hook_exists('test'))
+        writer.hooks_writer.del_hook('test')
+        self.assertFalse(writer.hooks_writer.hook_exists('test'))
 
         with self.assertRaisesRegex(KeyError, "Hook test does not exist"):
-            writer.del_hook('test')
+            writer.hooks_writer.del_hook('test')
 
 
     def test_get_add_delete_fields(self):
         writer = Writer(base_path + '/static/config_valid.yml')
 
         with self.assertRaisesRegex(KeyError, "Field output_test does not exist"):
-            writer.get_field('output_test')
+            writer.fields_writer.get_field('output_test')
 
-        self.assertFalse(writer.field_exists('output_test'))
-        writer.add_field(input='input_test', output='output_test')
-        self.assertTrue(writer.field_exists('output_test'))
-        field = writer.get_field('output_test')
+        self.assertFalse(writer.fields_writer.field_exists('output_test'))
+        writer.fields_writer.add_field(input='input_test', output='output_test')
+        self.assertTrue(writer.fields_writer.field_exists('output_test'))
+        field = writer.fields_writer.get_field('output_test')
         self.assertEqual(field, {'input': 'input_test', 'output': 'output_test', 'rules': {}})
 
         with self.assertRaisesRegex(KeyError, "Field output_test already exists. Delete it first"):
-            writer.add_field(input='input_test', output='output_test')
+            writer.fields_writer.add_field(input='input_test', output='output_test')
 
-        writer.del_field('output_test')
-        self.assertFalse(writer.field_exists('output_test'))
+        writer.fields_writer.del_field('output_test')
+        self.assertFalse(writer.fields_writer.field_exists('output_test'))
 
         with self.assertRaisesRegex(KeyError, "Field output_test does not exist"):
-            writer.del_field('output_test')
+            writer.fields_writer.del_field('output_test')
 
 
     def test_get_add_delete_rules(self):
         writer = Writer(base_path + '/static/config_valid.yml')
 
         with self.assertRaisesRegex(KeyError, "'Field output_test does not exists. Cannot get rules"):
-            writer.get_rules('output_test')
+            writer.fields_writer.get_rules('output_test')
 
-        writer.add_field(input='input_test', output='output_test')
-        self.assertFalse(writer.rule_exists('output_test', 'test'))
+        writer.fields_writer.add_field(input='input_test', output='output_test')
+        self.assertFalse(writer.fields_writer.rule_exists('output_test', 'test'))
 
-        writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'}, blocking=True)
-        self.assertTrue(writer.rule_exists('output_test', 'test'))
-        rules = writer.get_rules('output_test')
+        writer.fields_writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'}, blocking=True)
+        self.assertTrue(writer.fields_writer.rule_exists('output_test', 'test'))
+        rules = writer.fields_writer.get_rules('output_test')
         self.assertTrue('test' in rules)
         self.assertEqual(rules['test'], {
             'active': True, 'blocking': True, 'description': None, 'method': 'my_method',
             'name': 'test', 'params': {'a': 'b'}, 'priority': 1})
 
         with self.assertRaisesRegex(KeyError, "Rule test already exists for output_test. Delete it first"):
-            writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'})
+            writer.fields_writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'})
 
-        writer.del_rule('output_test', 'test')
-        self.assertFalse(writer.rule_exists('output_test', 'test'))
-        rules = writer.get_rules('output_test')
+        writer.fields_writer.del_rule('output_test', 'test')
+        self.assertFalse(writer.fields_writer.rule_exists('output_test', 'test'))
+        rules = writer.fields_writer.get_rules('output_test')
         self.assertEqual(rules, {})
 
         with self.assertRaisesRegex(KeyError, "Rule test does not exist for output_test"):
-            writer.del_rule('output_test', 'test')
+            writer.fields_writer.del_rule('output_test', 'test')
 
 
     def test_add_hook_to_db_new_job(self):
@@ -257,8 +257,8 @@ class TestWriter(unittest.TestCase):
         writer.set_prop('name', self._job_name)
         writer.set_prop('input', self._job_input)
         writer.set_prop('output', self._job_output)
-        writer.add_hook(name='test', method='method', when='never', description='Hook from Test', priority=10)
-        writer.add_hook(name='test2', method='method2', when='always', active=False)
+        writer.hooks_writer.add_hook(name='test', method='method', when='never', description='Hook from Test', priority=10)
+        writer.hooks_writer.add_hook(name='test2', method='method2', when='always', active=False)
         writer.save()
 
         self.assertTrue(os.path.isfile('/tmp/test.db'))
@@ -301,7 +301,7 @@ class TestWriter(unittest.TestCase):
         # Reinit the writer now to make sure I have no error
         writer = Writer(base_path + '/static/config_valid.yml', jobInDb['name'])
         with self.assertRaisesRegex(KeyError, "Hook test does not exist"):
-            writer.get_hook('test')
+            writer.hooks_writer.get_hook('test')
 
 
     def test_add_hook_to_db_existing_job(self):
@@ -313,8 +313,8 @@ class TestWriter(unittest.TestCase):
         writer.set_prop('name', self._job_name)
         writer.set_prop('input', self._job_input)
         writer.set_prop('output', self._job_output)
-        writer.add_hook(name='test', method='method', when='never', description='Hook from Test', priority=10)
-        writer.add_hook(name='test2', method='method2', when='always', active=False)
+        writer.hooks_writer.add_hook(name='test', method='method', when='never', description='Hook from Test', priority=10)
+        writer.hooks_writer.add_hook(name='test2', method='method2', when='always', active=False)
         writer.save()
 
         self.assertTrue(os.path.isfile('/tmp/test.db'))
@@ -324,7 +324,7 @@ class TestWriter(unittest.TestCase):
 
         # Reinit the writer now to see if I have my job
         writer = Writer(base_path + '/static/config_valid.yml', jobInDb['name'])
-        hook_test = writer.get_hook('test')
+        hook_test = writer.hooks_writer.get_hook('test')
         self.assertEqual('test', hook_test['name'])
         self.assertEqual('Hook from Test', hook_test['description'])
         self.assertIs(10, hook_test['priority'])
@@ -332,7 +332,7 @@ class TestWriter(unittest.TestCase):
         self.assertEqual(1, hook_test['active'])
         self.assertEqual('never', hook_test['when'])
 
-        hook_test2 = writer.get_hook('test2')
+        hook_test2 = writer.hooks_writer.get_hook('test2')
         self.assertEqual('test2', hook_test2['name'])
         self.assertIs(None, hook_test2['description'])
         self.assertIs(1, hook_test2['priority'])
@@ -341,7 +341,7 @@ class TestWriter(unittest.TestCase):
         self.assertEqual('always', hook_test2['when'])
 
         # Now add a hook
-        writer.add_hook(name='test3', method='method3', when='sometimes')
+        writer.hooks_writer.add_hook(name='test3', method='method3', when='sometimes')
         writer.save()
 
         hooksInDb = self._get_hooks(jobInDb['id'], 3)
@@ -354,7 +354,7 @@ class TestWriter(unittest.TestCase):
         self.assertEqual('sometimes', hooksInDb[2]['when'])
 
         writer = Writer(base_path + '/static/config_valid.yml', jobInDb['name'])
-        hooksInObj = writer.get_hooks()
+        hooksInObj = writer.hooks_writer.get_hooks()
         self.assertEqual(3, len(hooksInObj))
         self.assertEqual('test', hooksInObj['test']['name'])
         self.assertEqual('test2', hooksInObj['test2']['name'])
@@ -370,10 +370,10 @@ class TestWriter(unittest.TestCase):
         writer.set_prop('name', self._job_name)
         writer.set_prop('input', self._job_input)
         writer.set_prop('output', self._job_output)
-        writer.add_field('input_test', 'output_test')
-        writer.add_field('input_test2', 'output_test2')
-        writer.add_rule(output_field='output_test', name='lowercase', method='lwrcs', description='Lower the case !', active=False)
-        writer.add_rule(output_field='output_test', name='uppercase', method='uprc', params={'a': 'b'}, blocking=True, priority=10)
+        writer.fields_writer.add_field('input_test', 'output_test')
+        writer.fields_writer.add_field('input_test2', 'output_test2')
+        writer.fields_writer.add_rule(output_field='output_test', name='lowercase', method='lwrcs', description='Lower the case !', active=False)
+        writer.fields_writer.add_rule(output_field='output_test', name='uppercase', method='uprc', params={'a': 'b'}, blocking=True, priority=10)
         job = writer.save()
         writer = Writer(base_path + '/static/config_valid.yml', job.name)
 
@@ -406,7 +406,7 @@ class TestWriter(unittest.TestCase):
 
         job = writer.get_job()
         self.assertEqual(self._job_name, job.name)
-        fields = writer.get_fields()
+        fields = writer.fields_writer.get_fields()
         self.assertTrue('output_test' in fields)
         self.assertTrue('output' in fields['output_test'])
         self.assertEqual(fields['output_test']['output'], 'output_test')
@@ -416,7 +416,7 @@ class TestWriter(unittest.TestCase):
         self.assertTrue('params' in fields['output_test']['rules']['lowercase'])
         self.assertEqual(fields['output_test']['rules']['lowercase']['params'], {})
 
-        rules = writer.get_rules('output_test')
+        rules = writer.fields_writer.get_rules('output_test')
         self.assertTrue('lowercase' in rules)
         self.assertTrue('method' in rules['lowercase'])
         self.assertTrue('params' in rules['lowercase'])
@@ -446,7 +446,7 @@ class TestWriter(unittest.TestCase):
         # Reinit the writer now to make sure I have no error
         writer = Writer(base_path + '/static/config_valid.yml', jobInDb['name'])
         with self.assertRaisesRegex(KeyError, "Field test does not exist"):
-            writer.get_field('test')
+            writer.fields_writer.get_field('test')
 
 
     def test_add_rule_to_db_existing_job(self):
@@ -457,10 +457,10 @@ class TestWriter(unittest.TestCase):
         writer.set_prop('name', self._job_name)
         writer.set_prop('input', self._job_input)
         writer.set_prop('output', self._job_output)
-        writer.add_field('input_test', 'output_test')
-        writer.add_field('input_test2', 'output_test2')
-        writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'}, blocking=True)
-        writer.add_rule(output_field='output_test', name='test2', method='my_method2', params={'b': 'c'}, blocking=False)
+        writer.fields_writer.add_field('input_test', 'output_test')
+        writer.fields_writer.add_field('input_test2', 'output_test2')
+        writer.fields_writer.add_rule(output_field='output_test', name='test', method='my_method', params={'a': 'b'}, blocking=True)
+        writer.fields_writer.add_rule(output_field='output_test', name='test2', method='my_method2', params={'b': 'c'}, blocking=False)
         writer.save()
 
         self.assertTrue(os.path.isfile('/tmp/test.db'))
@@ -471,11 +471,11 @@ class TestWriter(unittest.TestCase):
 
         # Reinit the writer now to see if I have my job
         writer = Writer(base_path + '/static/config_valid.yml', jobInDb['name'])
-        field_w_rules = writer.get_field('output_test')
+        field_w_rules = writer.fields_writer.get_field('output_test')
         self.assertEqual(field_w_rules['input'], 'input_test')
 
         # Read Rules
-        rules = writer.get_rules('output_test')
+        rules = writer.fields_writer.get_rules('output_test')
         rule_test = rules['test']
         self.assertEqual('test', rule_test['name'])
         self.assertEqual('my_method', rule_test['method'])
@@ -487,10 +487,10 @@ class TestWriter(unittest.TestCase):
         self.assertFalse(rule_test2['blocking'])
 
         # Now add more rules / fields
-        writer.add_rule(output_field='output_test', name='test3', method='my_method3', blocking=False)
+        writer.fields_writer.add_rule(output_field='output_test', name='test3', method='my_method3', blocking=False)
 
-        writer.add_field(input='input_test3', output='output_test3')
-        writer.add_rule(output_field='output_test3', name='test4', method='my_method4', blocking=True)
+        writer.fields_writer.add_field(input='input_test3', output='output_test3')
+        writer.fields_writer.add_rule(output_field='output_test3', name='test4', method='my_method4', blocking=True)
         writer.save()
 
         fieldsInDb = self._get_fields(jobInDb['id'], 3)
@@ -510,18 +510,18 @@ class TestWriter(unittest.TestCase):
 
         # Get the same from the writer
         writer = Writer(base_path + '/static/config_valid.yml', jobInDb['name'])
-        rulesInObj = writer.get_rules('output_test')
+        rulesInObj = writer.fields_writer.get_rules('output_test')
         self.assertEqual(len(rulesInObj), 3)
         self.assertEqual('test', rulesInObj['test']['name'])
         self.assertEqual('test2', rulesInObj['test2']['name'])
         self.assertEqual('test3', rulesInObj['test3']['name'])
 
-        rulesInObj = writer.get_rules('output_test3')
+        rulesInObj = writer.fields_writer.get_rules('output_test3')
         self.assertEqual(len(rulesInObj), 1)
         self.assertEqual('test4', rulesInObj['test4']['name'])
 
         # Get a field to make sure we also have rules with it
-        fieldInObj = writer.get_field('output_test')
+        fieldInObj = writer.fields_writer.get_field('output_test')
         self.assertEqual(len(fieldInObj['rules']), 3)
 
 
