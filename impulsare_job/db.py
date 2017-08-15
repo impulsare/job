@@ -24,13 +24,13 @@ class Db():
     def __init__(self, config_file: str = None):
         """Write logs to a file, with the app's name"""
 
-        self._logger = Logger('job', config_file)
 
         base_path = os.path.abspath(os.path.dirname(__file__))
         config_specs = base_path + '/static/specs.yml'
         config_default = base_path + '/static/default.yml'
 
         self._config = ConfigReader().parse(config_file, config_specs, config_default)
+        self._logger = Logger('job', config_file)
         self._logger.log.info('Opening SQLite DB "{}"'.format(self._config.get('job')['db']))
 
         self._db = open_db(self._config.get('job')['db'])
